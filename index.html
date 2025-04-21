@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monstros - Monster Hunter World</title>
+</head>
+<body>
+    <h1>Monster Hunter World - Monstros</h1>
+    <div class="select-monster">
+      <label for="monster-select">Escolha um monstro:</label>
+      <select id="monster-select">
+        <option value="" style="text-align: center;">-- Selecione --</option>
+      </select>
+    </div>
+    <div id="status"></div>
+
+    <div id="monster-details" style="display: none;">
+      <div id="loading" style="display: none; text-align: center; margin: 20px">
+        <img src="./src/load.gif" alt="Carregando..." style="width: 300px" />
+      </div>
+    </div>
+
+    <script type="module" src="./main.js"></script>
+
+</body>
+</html>
