@@ -247,5 +247,4 @@ async function renderMonsterDetails(monster) {
     );
   }
 }
-
 init();
