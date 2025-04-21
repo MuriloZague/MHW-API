@@ -1,23 +1,27 @@
 import { getAllMonstersNames, getMonsterById } from "./api.js";
 import { createElement, translateText } from "./utils.js";
 
-const select = document.querySelector("select");
+const searchInput = document.getElementById("monster-search");
+const suggestionsList = document.getElementById("suggestions");
 const status = document.getElementById("status");
 const details = document.getElementById("monster-details");
 const loading = document.querySelector("#monster-details #loading");
 
+let allMonsters = [];
+
+function debounce(fn, delay) {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
+}
+
 async function init() {
   try {
     status.textContent = "Carregando...";
-
     const { fromCache, data } = await getAllMonstersNames();
-
-    data.forEach((monster) => {
-      const option = createElement("option", { value: monster.id }, [
-        monster.name,
-      ]);
-      select.appendChild(option);
-    });
+    allMonsters = data; //Salva em um array
 
     status.textContent = fromCache
       ? "Dados carregados do cache."
@@ -28,21 +32,50 @@ async function init() {
   }
 }
 
-select.addEventListener("change", async (e) => {
-  const id = e.target.value;
-  if (!id) return;
+//Debounce
+const buscarDebounce = debounce(() => {
+  const query = searchInput.value.toLowerCase().trim();
+  suggestionsList.innerHTML = "";
 
-  status.textContent = "Carregando detalhes...";
+  if (!query) return;
 
-  try {
-    const monster = await getMonsterById(id);
-    renderMonsterDetails(monster);
-    status.textContent = "";
-  } catch (err) {
-    status.textContent = "Erro: " + err.message;
-  }
+  const filtered = allMonsters.filter((monster) =>
+    monster.name.toLowerCase().includes(query)
+  );
+
+  //Exibição dos resultados da busca
+  filtered.slice(0, 8).forEach((monster) => {
+    const item = document.createElement("li");
+    item.textContent = monster.name;
+    item.style.cursor = "pointer";
+    item.style.background = "#3e2e1f";
+    item.style.color = "#fffbe0";
+    item.style.padding = "5px";
+    item.style.border = "1px solid #d6a84f";
+    item.style.marginTop = "2px";
+    item.style.borderRadius = "4px";
+
+    //Ao clicar em um resultado:
+    item.addEventListener("click", async () => {
+      searchInput.value = monster.name; //Busca o monstro com o nome escolhido
+      suggestionsList.innerHTML = ""; //Limpa as sugestões de pesquisa
+      status.textContent = "Carregando detalhes...";
+      try {
+        const data = await getMonsterById(monster.id);
+        renderMonsterDetails(data);
+        status.textContent = "";
+      } catch (err) {
+        status.textContent = "Erro: " + err.message;
+      }
+    });
+
+    suggestionsList.appendChild(item);
+  });
 });
 
+searchInput.addEventListener("input", buscarDebounce); //Sempre que o campo de busca mudar ele usa a função debounce
+
+//Mostra todos os detalhes
 async function renderMonsterDetails(monster) {
   details.style.display = "block";
   details.innerHTML = "";
@@ -50,7 +83,7 @@ async function renderMonsterDetails(monster) {
   loading.style.display = "block";
 
   try {
-    // Tradução dos textos
+    //Tradução dos textos com a api do google
     const [
       typeLabel,
       speciesLabel,
@@ -79,7 +112,7 @@ async function renderMonsterDetails(monster) {
 
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    // Cria os elementos principais do monstro
+    //Cria os elementos principais do monstro
     const title = createElement("h2", {}, [monster.name]);
     const descEl = createElement("p", {}, [translatedDescription]);
     const type = createElement("p", {}, [
@@ -89,14 +122,14 @@ async function renderMonsterDetails(monster) {
       `${speciesLabel} ${monster.species || "N/A"}`,
     ]);
 
-    // Elementos
+    //Elementos
     const elements = createElement("p", {}, [
       `${elementsLabel} ${
         monster.elements.length ? monster.elements.join(", ") : noneText
       }`,
     ]);
 
-    // Doenças
+    //Doenças
     const ailments = createElement("p", {}, [
       `${ailmentsLabel} ${
         monster.ailments.length
@@ -105,7 +138,7 @@ async function renderMonsterDetails(monster) {
       }`,
     ]);
 
-    // Localizações
+    //Localizações
     const locationsSection = createElement("div", {}, [
       createElement("h3", {}, [locationsLabel]),
     ]);
@@ -119,7 +152,7 @@ async function renderMonsterDetails(monster) {
       locationsSection.appendChild(createElement("p", {}, [noneText]));
     }
 
-    // Fraquezas
+    //Fraquezas
     const weaknessesSection = createElement("div", {}, [
       createElement("h3", {}, [weaknessesLabel]),
     ]);
@@ -137,7 +170,7 @@ async function renderMonsterDetails(monster) {
       weaknessesSection.appendChild(createElement("p", {}, [noWeaknessesText]));
     }
 
-    // Resistências
+    //Resistências
     const resistancesSection = createElement("div", {}, [
       createElement("h3", {}, [resistancesLabel]),
     ]);
@@ -151,15 +184,14 @@ async function renderMonsterDetails(monster) {
       resistancesSection.appendChild(createElement("p", {}, [noneText]));
     }
 
-    // Recompensas
+    //Recompensas
     const rewardsSection = createElement("div", {}, [
       createElement("h3", {}, [rewardsLabel]),
     ]);
 
     if (monster.rewards && monster.rewards.length) {
       const rewardGroups = {};
-
-      // Agrupa recompensas por item
+      //Agrupa recompensas por item
       monster.rewards.forEach((reward) => {
         if (!rewardGroups[reward.item.name]) {
           rewardGroups[reward.item.name] = {
@@ -170,7 +202,7 @@ async function renderMonsterDetails(monster) {
         rewardGroups[reward.item.name].conditions.push(...reward.conditions);
       });
 
-      // Cria itens de recompensa
+      //Cria itens de recompensa
       const rewardItems = await Promise.all(
         Object.values(rewardGroups).map(async (group) => {
           return createElement(
@@ -193,8 +225,7 @@ async function renderMonsterDetails(monster) {
     } else {
       rewardsSection.appendChild(createElement("p", {}, [noneText]));
     }
-
-    // Adiciona todas as seções ao container principal
+    //Adiciona todas as seções ao container principal (detalhes)
     details.append(
       title,
       descEl,
@@ -208,9 +239,9 @@ async function renderMonsterDetails(monster) {
       rewardsSection
     );
 
-    loading.style.display = "none";
+    loading.style.display = "none"; //Desativa o gif de loading
   } catch (err) {
-    loading.style.display = "none";
+    loading.style.display = "none"; //Desativa o gif de loading
     details.appendChild(
       createElement("p", {}, ["Erro ao carregar os dados: " + err.message])
     );

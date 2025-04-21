@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Monstros - Monster Hunter World</title>
     <style>
       @import url("https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&display=swap");
@@ -41,7 +41,7 @@
         color: #ffcc00;
       }
 
-      select {
+      #monster-search {
         font-size: 1rem;
         padding: 8px;
         background: #3e2e1f;
@@ -49,6 +49,11 @@
         border: 2px solid #d6a84f;
         border-radius: 5px;
         margin-top: 10px;
+      }
+
+      .search-monster {
+        display: flex;
+        flex-direction: column;
       }
 
       #monster-details {
@@ -123,23 +128,22 @@
         }
       }
     </style>
-
-</head>
-<body>
+  </head>
+  <body>
     <h1>Monster Hunter World - Monstros</h1>
-    <div class="select-monster">
-      <label for="monster-select">Escolha um monstro:</label>
-      <select id="monster-select">
-        <option value="" style="text-align: center;">-- Selecione --</option>
-      </select>
-    </div>
-    <div id="status"></div>
 
-    <div id="monster-details" style="display: none;">
+    <div class="search-monster">
+      <div id="status"></div>
+      <label for="monster-search" style="text-align: center">Busque um monstro:</label>
+      <input type="text" id="monster-search" placeholder="Digite o nome do monstro..."/>
+      <ul id="suggestions" style="list-style: none; padding: 0; margin-top: 5px"></ul>
+    </div>
+    
+    <div id="monster-details" style="display: none">
       <div id="loading" style="display: none; text-align: center; margin: 20px">
         <img src="./src/load.gif" alt="Carregando..." style="width: 300px" />
       </div>
     </div>
     <script type="module" src="./main.js"></script>
-</body>
+  </body>
 </html>
