@@ -1,8 +1,9 @@
 const BASE_URL = "https://mhw-db.com";
 const MONSTERS_CACHE_KEY = "mhw-monsters-names";
-const CACHE_TIME = 5 * 60 * 1000; // 5 minutos
+const CACHE_TIME = 5 * 60 * 1000; // 5 minutos de duração
 
 export async function getAllMonstersNames() {
+    //verifica se está armazenado no cache, se não buscar novamente
   const cache = localStorage.getItem(MONSTERS_CACHE_KEY);
   if (cache) {
     const { timestamp, data } = JSON.parse(cache);
@@ -11,6 +12,7 @@ export async function getAllMonstersNames() {
     }
   }
 
+  //buscar novamente
   const res = await fetch(`${BASE_URL}/monsters`);
   if (!res.ok) {
     alert("Erro ao buscar monstros");
