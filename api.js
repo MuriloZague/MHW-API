@@ -3,7 +3,7 @@ const MONSTERS_CACHE_KEY = "mhw-monsters-names";
 const CACHE_TIME = 5 * 60 * 1000; // 5 minutos de duração
 
 export async function getAllMonstersNames() {
-    //verifica se está armazenado no cache, se não buscar novamente
+  //verifica se está armazenado no cache, se não buscar novamente
   const cache = localStorage.getItem(MONSTERS_CACHE_KEY);
   if (cache) {
     const { timestamp, data } = JSON.parse(cache);
@@ -38,9 +38,11 @@ export async function getAllMonstersNames() {
 export async function getMonsterById(id) {
   try {
     const res = await fetch(`${BASE_URL}/monsters/${id}`);
-    if (!res.ok) throw new Error("Erro ao buscar detalhes do monstro");
-    return await res.json();
+    if (!res.ok){
+      alert("Erro ao buscar detalhes do monstro");
+    }
+      return await res.json();
   } catch (err) {
-    throw new Error("Erro ao buscar detalhes: " + err.message);
+    alert("Erro ao buscar detalhes: " + err.message);
   }
 }

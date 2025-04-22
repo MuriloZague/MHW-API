@@ -3,17 +3,45 @@ import { createElement, translateText } from "./utils.js";
 
 const searchInput = document.getElementById("monster-search");
 const suggestionsList = document.getElementById("suggestions");
+const favoritosList = document.getElementById("favoritos");
 const status = document.getElementById("status");
 const details = document.getElementById("monster-details");
 const loading = document.querySelector("#monster-details #loading");
 
 let allMonsters = [];
 
-function debounce(fn, delay) {
+//Funções para obter e salvar favoritos no localStorage
+const obterFavoritos = () => {
+  return JSON.parse(localStorage.getItem("favoritos")) || [];
+}
+
+const salvarFavoritos = (favoritos) => {
+  localStorage.setItem("favoritos", JSON.stringify(favoritos));
+}
+
+//Alterna entre adicionar e remover o monstro dos favoritos
+const alternarFavorito = (monstro) => {
+  const favoritos = obterFavoritos();
+  const index = favoritos.findIndex(fav => fav.id === monstro.id);
+
+  if (index === -1) {
+    favoritos.push({ id: monstro.id, name: monstro.name });
+  } else {
+    favoritos.splice(index, 1);
+  }
+
+  salvarFavoritos(favoritos);
+  renderMonsterDetails(currentMonster);
+};
+
+
+let currentMonster = null; //Salva o monstro atual
+
+const debounce = (fn, delay) => {
   let timer;
   return (...args) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => fn(...args), delay);
+  clearTimeout(timer);
+  timer = setTimeout(() => fn(...args), delay);
   };
 }
 
@@ -39,9 +67,7 @@ const buscarDebounce = debounce(() => {
 
   if (!query) return;
 
-  const filtered = allMonsters.filter((monster) =>
-    monster.name.toLowerCase().includes(query)
-  );
+  const filtered = allMonsters.filter((monster) => monster.name.toLowerCase().includes(query));
 
   //Exibição dos resultados da busca
   filtered.slice(0, 8).forEach((monster) => {
@@ -51,9 +77,11 @@ const buscarDebounce = debounce(() => {
     item.style.background = "#3e2e1f";
     item.style.color = "#fffbe0";
     item.style.padding = "5px";
+    item.style.paddingInline = "50px";
     item.style.border = "1px solid #d6a84f";
-    item.style.marginTop = "2px";
+    item.style.marginTop = "10px";
     item.style.borderRadius = "4px";
+    item.style.textAlign = 'center';
 
     //Ao clicar em um resultado:
     item.addEventListener("click", async () => {
@@ -71,9 +99,48 @@ const buscarDebounce = debounce(() => {
 
     suggestionsList.appendChild(item);
   });
-});
+}, 500);
 
-searchInput.addEventListener("input", buscarDebounce); //Sempre que o campo de busca mudar ele usa a função debounce
+searchInput.addEventListener("keyup", (e) => {buscarDebounce(e.target.value)}); //Sempre que o campo de busca mudar ele usa a função debounce
+
+
+const listarFavoritos = () => {
+  const favoritos = obterFavoritos()
+  console.log(favoritos)
+  favoritos.slice().forEach((monster) => {
+    const item = document.createElement("li");
+    item.textContent = monster.name;
+    item.style.cursor = "pointer";
+    item.style.background = "#3e2e1f";
+    item.style.color = "#fffbe0";
+    item.style.padding = "5px";
+    item.style.paddingInline = "50px";
+    item.style.border = "1px solid #d6a84f";
+    item.style.marginTop = "10px";
+    item.style.borderRadius = "4px";
+    item.style.textAlign = 'center';
+
+    //Ao clicar em um resultado:
+    item.addEventListener("click", async () => {
+      searchInput.value = monster.name; //Busca o monstro com o nome escolhido
+      favoritosList.innerHTML = ""; //Limpa as sugestões de pesquisa
+      status.textContent = "Carregando detalhes...";
+      try {
+        const data = await getMonsterById(monster.id);
+        renderMonsterDetails(data);
+        status.textContent = "";
+      } catch (err) {
+        status.textContent = "Erro: " + err.message;
+      }
+    });
+
+    
+    favoritosList.appendChild(item);
+  })
+
+};
+
+listarFavoritos()
 
 //Mostra todos os detalhes
 async function renderMonsterDetails(monster) {
@@ -114,6 +181,25 @@ async function renderMonsterDetails(monster) {
 
     //Cria os elementos principais do monstro
     const title = createElement("h2", {}, [monster.name]);
+    currentMonster = monster; //Salva o monstro atual para referência
+
+    // Botão de favorito
+    const favoritos = obterFavoritos();
+    const botaoFav = createElement("button", {style: "margin-left: 10px; cursor: pointer; font-size: 24px; background: none; border: none;",});
+
+    //Img favoritar
+    const estrelaImg = document.createElement("img");
+    estrelaImg.src = favoritos.some(fav => fav.id === monster.id) ? "./src/estrela-completa.png" : "./src/estrela-vazia.png";
+    estrelaImg.width = 35;
+    estrelaImg.height = 35;
+    botaoFav.appendChild(estrelaImg)
+
+    botaoFav.addEventListener("click", () => {
+      alternarFavorito(monster);
+    });
+
+    title.appendChild(botaoFav); // Adiciona o botão ao lado do nome do monstro
+
     const descEl = createElement("p", {}, [translatedDescription]);
     const type = createElement("p", {}, [
       `${typeLabel} ${monster.type || "N/A"}`,
@@ -247,4 +333,5 @@ async function renderMonsterDetails(monster) {
     );
   }
 }
+
 init();
