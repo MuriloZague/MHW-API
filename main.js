@@ -25,7 +25,9 @@ const alternarFavorito = (monstro) => {
   const index = favoritos.findIndex(fav => fav.id === monstro.id);
 
   if (index === -1) {
-    favoritos.push({ id: monstro.id, name: monstro.name });
+    favoritos.push({ id: monstro.id, name: monstro.name, type: monstro.type, species: monstro.species, elements: monstro.elements, 
+      description: monstro.description, ailments: monstro.ailments, locations: monstro.locations, resistances: monstro.resistances, 
+      weaknesses: monstro.weaknesses, rewards: monstro.rewards });
   } else {
     favoritos.splice(index, 1);
   }
