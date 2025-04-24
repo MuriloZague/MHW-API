@@ -3,7 +3,6 @@ import { createElement, translateText } from "./utils.js";
 
 const searchInput = document.getElementById("monster-search");
 const suggestionsList = document.getElementById("suggestions");
-const favoritosList = document.getElementById("favoritos");
 const status = document.getElementById("status");
 const details = document.getElementById("monster-details");
 const loading = document.querySelector("#monster-details #loading");
@@ -47,32 +46,8 @@ const debounce = (fn, delay) => {
   };
 }
 
-async function init() {
-  try {
-    status.textContent = "Carregando...";
-    const { fromCache, data } = await getAllMonstersNames();
-    allMonsters = data; //Salva em um array
-
-    status.textContent = fromCache
-      ? "Dados carregados do cache."
-      : "Dados carregados da API.";
-    status.className = fromCache ? "cache-warning" : "";
-  } catch (err) {
-    status.textContent = "Erro: " + err.message;
-  }
-}
-
-//Debounce
-const buscarDebounce = debounce(() => {
-  const query = searchInput.value.toLowerCase().trim();
-  suggestionsList.innerHTML = "";
-
-  if (!query) return;
-
-  const filtered = allMonsters.filter((monster) => monster.name.toLowerCase().includes(query));
-
-  //Exibição dos resultados da busca
-  filtered.slice(0, 8).forEach((monster) => {
+const listMonsters = (value) => {
+  value.slice(0, 8).forEach((monster) => {
     const item = document.createElement("li");
     item.textContent = monster.name;
     item.style.cursor = "pointer";
@@ -101,6 +76,35 @@ const buscarDebounce = debounce(() => {
 
     suggestionsList.appendChild(item);
   });
+}
+
+async function init() {
+  try {
+    status.textContent = "Carregando...";
+    const { fromCache, data } = await getAllMonstersNames();
+    allMonsters = data; //Salva em um array
+
+    status.textContent = fromCache
+      ? "Dados carregados do cache."
+      : "Dados carregados da API.";
+    status.className = fromCache ? "cache-warning" : "";
+  } catch (err) {
+    status.textContent = "Erro: " + err.message;
+  }
+}
+
+//Debounce
+const buscarDebounce = debounce(() => {
+  const query = searchInput.value.toLowerCase().trim();
+  suggestionsList.innerHTML = "";
+
+  if (!query) return;
+
+  const filtered = allMonsters.filter((monster) => monster.name.toLowerCase().includes(query));
+
+  //Exibição dos resultados da busca
+  listMonsters(filtered)
+
 }, 500);
 
 searchInput.addEventListener("keyup", (e) => {buscarDebounce(e.target.value)}); //Sempre que o campo de busca mudar ele usa a função debounce
@@ -109,37 +113,7 @@ searchInput.addEventListener("keyup", (e) => {buscarDebounce(e.target.value)}); 
 const listarFavoritos = () => {
   const favoritos = obterFavoritos()
   console.log(favoritos)
-  favoritos.slice().forEach((monster) => {
-    const item = document.createElement("li");
-    item.textContent = monster.name;
-    item.style.cursor = "pointer";
-    item.style.background = "#3e2e1f";
-    item.style.color = "#fffbe0";
-    item.style.padding = "5px";
-    item.style.paddingInline = "50px";
-    item.style.border = "1px solid #d6a84f";
-    item.style.marginTop = "10px";
-    item.style.borderRadius = "4px";
-    item.style.textAlign = 'center';
-
-    //Ao clicar em um resultado:
-    item.addEventListener("click", async () => {
-      searchInput.value = monster.name; //Busca o monstro com o nome escolhido
-      favoritosList.innerHTML = ""; //Limpa as sugestões de pesquisa
-      status.textContent = "Carregando detalhes...";
-      try {
-        const data = await getMonsterById(monster.id);
-        renderMonsterDetails(data);
-        status.textContent = "";
-      } catch (err) {
-        status.textContent = "Erro: " + err.message;
-      }
-    });
-
-    
-    favoritosList.appendChild(item);
-  })
-
+  listMonsters(favoritos);
 };
 
 listarFavoritos()
