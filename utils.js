@@ -15,7 +15,7 @@ export function createElement(tag, attrs = {}, children = []) {
     return el;
   }
   
-  export async function translateText(text, targetLanguage = 'pt') {
+  export async function translateText(text, targetLanguage = 'pt-br') {
     const apiKey = ''; //key ocultada
     const url = `https://translation.googleapis.com/language/translate/v2?key=${apiKey}`;
   

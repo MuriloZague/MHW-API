@@ -1,42 +1,60 @@
 import { getAllMonstersNames, getMonsterById } from "./api.js";
 import { createElement, translateText } from "./utils.js";
 
-const searchInput = document.getElementById("monster-search");
-const suggestionsList = document.getElementById("suggestions");
+const caixaPesquisa = document.getElementById("monster-search");
+const listaSujestao = document.getElementById("suggestions");
 const status = document.getElementById("status");
-const details = document.getElementById("monster-details");
+const detalhes = document.getElementById("monster-details");
 const loading = document.querySelector("#monster-details #loading");
 
-let allMonsters = [];
+let nomeMonstros = [];
+let monstroAtual = null;
 
-//Funções para obter e salvar favoritos no localStorage
-const obterFavoritos = () => {
-  return JSON.parse(localStorage.getItem("favoritos")) || [];
+async function init() {
+  try {
+    status.textContent = "Carregando...";
+    const { fromCache, data } = await getAllMonstersNames(); //Pega o nome de todos os monstros
+    nomeMonstros = data; //Salva em um array
+
+    status.textContent = fromCache ? "Dados carregados do cache." : "Dados carregados da API.";
+    status.className = fromCache ? "cache-warning" : "";
+  } catch (e) {
+    status.textContent = "Erro: " + e;
+  }
 }
 
+//Função para salvar favoritos no localStorage
 const salvarFavoritos = (favoritos) => {
   localStorage.setItem("favoritos", JSON.stringify(favoritos));
 }
 
+//Função para obter favoritos no localStorage
+const obterFavoritos = () => {
+  return JSON.parse(localStorage.getItem("favoritos")) || [];
+}
+
 //Alterna entre adicionar e remover o monstro dos favoritos
-const alternarFavorito = (monstro) => {
+async function alternarFavorito(monstro) {
   const favoritos = obterFavoritos();
-  const index = favoritos.findIndex(fav => fav.id === monstro.id);
+  const index = favoritos.findIndex(fav => fav.id === monstro.id); //Retorna -1 se o item não estiver na lista
 
   if (index === -1) {
-    favoritos.push({ id: monstro.id, name: monstro.name, type: monstro.type, species: monstro.species, elements: monstro.elements, 
-      description: monstro.description, ailments: monstro.ailments, locations: monstro.locations, resistances: monstro.resistances, 
-      weaknesses: monstro.weaknesses, rewards: monstro.rewards });
+    const traduzido = {
+      id: monstro.id,
+      name: await translateText(monstro.name),
+      type: await translateText(monstro.type || "Nenhum"),
+      species: await translateText(monstro.species || "Nenhuma"),
+      elements: await Promise.all(monstro.elements.map(el => translateText(el || "Nenhum"))),
+      description: await translateText(monstro.description || "Sem descrição disponível"),
+    };
+    favoritos.push(traduzido);
   } else {
     favoritos.splice(index, 1);
   }
 
-  salvarFavoritos(favoritos);
-  renderMonsterDetails(currentMonster);
+  salvarFavoritos(favoritos); //Atualiza o array de favoritos
+  renderizarMonstro(monstroAtual);
 };
-
-
-let currentMonster = null; //Salva o monstro atual
 
 const debounce = (fn, delay) => {
   let timer;
@@ -46,7 +64,21 @@ const debounce = (fn, delay) => {
   };
 }
 
-const listMonsters = (value) => {
+//Debounce
+const buscarDebounce = debounce(() => {
+  listaSujestao.innerHTML = "";
+  const pesquisa = caixaPesquisa.value.toLowerCase().trim(); //Pegar os dados da caixa de pesquisa
+
+  if (!pesquisa){
+    return;
+  }
+
+  const filtro = nomeMonstros.filter((monster) => monster.name.toLowerCase().includes(pesquisa));
+  //Exibição dos resultados da busca
+  listarMonstros(filtro)
+}, 500);
+
+const listarMonstros = (value) => {
   value.slice(0, 8).forEach((monster) => {
     const item = document.createElement("li");
     item.textContent = monster.name;
@@ -60,85 +92,47 @@ const listMonsters = (value) => {
     item.style.borderRadius = "4px";
     item.style.textAlign = 'center';
 
+    listaSujestao.appendChild(item);
+
     //Ao clicar em um resultado:
     item.addEventListener("click", async () => {
-      searchInput.value = monster.name; //Busca o monstro com o nome escolhido
-      suggestionsList.innerHTML = ""; //Limpa as sugestões de pesquisa
+      listaSujestao.innerHTML = ""; //Limpa as sugestões de pesquisa
       status.textContent = "Carregando detalhes...";
       try {
         const data = await getMonsterById(monster.id);
-        renderMonsterDetails(data);
+        renderizarMonstro(data);
         status.textContent = "";
-      } catch (err) {
-        status.textContent = "Erro: " + err.message;
+      } catch (e) {
+        status.textContent = "Erro: " + e;
       }
     });
-
-    suggestionsList.appendChild(item);
   });
 }
 
-async function init() {
-  try {
-    status.textContent = "Carregando...";
-    const { fromCache, data } = await getAllMonstersNames();
-    allMonsters = data; //Salva em um array
-
-    status.textContent = fromCache
-      ? "Dados carregados do cache."
-      : "Dados carregados da API.";
-    status.className = fromCache ? "cache-warning" : "";
-  } catch (err) {
-    status.textContent = "Erro: " + err.message;
-  }
-}
-
-//Debounce
-const buscarDebounce = debounce(() => {
-  const query = searchInput.value.toLowerCase().trim();
-  suggestionsList.innerHTML = "";
-
-  if (!query) return;
-
-  const filtered = allMonsters.filter((monster) => monster.name.toLowerCase().includes(query));
-
-  //Exibição dos resultados da busca
-  listMonsters(filtered)
-
-}, 500);
-
-searchInput.addEventListener("keyup", (e) => {buscarDebounce(e.target.value)}); //Sempre que o campo de busca mudar ele usa a função debounce
-
-
-const listarFavoritos = () => {
-  const favoritos = obterFavoritos()
-  console.log(favoritos)
-  listMonsters(favoritos);
-};
-
-listarFavoritos()
+caixaPesquisa.addEventListener("keyup", (e) => {buscarDebounce(e.target.value)}); //Sempre que o campo de busca mudar ele usa a função debounce
 
 //Mostra todos os detalhes
-async function renderMonsterDetails(monster) {
-  details.style.display = "block";
-  details.innerHTML = "";
-  details.appendChild(loading);
+async function renderizarMonstro(monster) {
+
+  detalhes.style.display = "block";
+  detalhes.innerHTML = "";
+  detalhes.appendChild(loading);
   loading.style.display = "block";
 
   try {
     //Tradução dos textos com a api do google
     const [
-      typeLabel,
-      speciesLabel,
-      elementsLabel,
-      noneText,
-      ailmentsLabel,
-      weaknessesLabel,
-      noWeaknessesText,
-      locationsLabel,
-      resistancesLabel,
-      rewardsLabel,
-      translatedDescription,
+      tipo,
+      especie,
+      elementos,
+      semTexto,
+      doencas,
+      fraquezas,
+      semFraquezas,
+      localizacao,
+      resistencias,
+      recompensas,
+      descricao,
     ] = await Promise.all([
       translateText("Tamanho:"),
       translateText("Espécie:"),
@@ -153,11 +147,11 @@ async function renderMonsterDetails(monster) {
       translateText(monster.description || "Sem descrição disponível"),
     ]);
 
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    await new Promise((resolve) => setTimeout(resolve, 2000)); //Delay proposital de 2 segundos
 
     //Cria os elementos principais do monstro
     const title = createElement("h2", {}, [monster.name]);
-    currentMonster = monster; //Salva o monstro atual para referência
+    monstroAtual = monster; //Salva o monstro atual para referência
 
     // Botão de favorito
     const favoritos = obterFavoritos();
@@ -165,7 +159,7 @@ async function renderMonsterDetails(monster) {
 
     //Img favoritar
     const estrelaImg = document.createElement("img");
-    estrelaImg.src = favoritos.some(fav => fav.id === monster.id) ? "./src/estrela-completa.png" : "./src/estrela-vazia.png";
+    estrelaImg.src = favoritos.some(fav => fav.id === monster.id) ? "./src/estrela-completa.png" : "./src/estrela-vazia.png"; //Verficar favorito
     estrelaImg.width = 35;
     estrelaImg.height = 35;
     botaoFav.appendChild(estrelaImg)
@@ -176,33 +170,33 @@ async function renderMonsterDetails(monster) {
 
     title.appendChild(botaoFav); // Adiciona o botão ao lado do nome do monstro
 
-    const descEl = createElement("p", {}, [translatedDescription]);
+    const descEl = createElement("p", {}, [descricao]);
     const type = createElement("p", {}, [
-      `${typeLabel} ${monster.type || "N/A"}`,
+      `${tipo} ${monster.type || "N/A"}`,
     ]);
     const species = createElement("p", {}, [
-      `${speciesLabel} ${monster.species || "N/A"}`,
+      `${especie} ${monster.species || "N/A"}`,
     ]);
 
     //Elementos
     const elements = createElement("p", {}, [
-      `${elementsLabel} ${
-        monster.elements.length ? monster.elements.join(", ") : noneText
+      `${elementos} ${
+        monster.elements.length ? monster.elements.join(", ") : semTexto
       }`,
     ]);
 
     //Doenças
     const ailments = createElement("p", {}, [
-      `${ailmentsLabel} ${
+      `${doencas} ${
         monster.ailments.length
           ? monster.ailments.map((a) => a.name).join(", ")
-          : noneText
+          : semTexto
       }`,
     ]);
 
     //Localizações
     const locationsSection = createElement("div", {}, [
-      createElement("h3", {}, [locationsLabel]),
+      createElement("h3", {}, [localizacao]),
     ]);
 
     if (monster.locations && monster.locations.length) {
@@ -211,12 +205,12 @@ async function renderMonsterDetails(monster) {
       );
       locationsSection.appendChild(createElement("ul", {}, locationItems));
     } else {
-      locationsSection.appendChild(createElement("p", {}, [noneText]));
+      locationsSection.appendChild(createElement("p", {}, [semTexto]));
     }
 
     //Fraquezas
     const weaknessesSection = createElement("div", {}, [
-      createElement("h3", {}, [weaknessesLabel]),
+      createElement("h3", {}, [fraquezas]),
     ]);
 
     if (monster.weaknesses.length) {
@@ -229,12 +223,12 @@ async function renderMonsterDetails(monster) {
       );
       weaknessesSection.appendChild(createElement("ul", {}, listItems));
     } else {
-      weaknessesSection.appendChild(createElement("p", {}, [noWeaknessesText]));
+      weaknessesSection.appendChild(createElement("p", {}, [semFraquezas]));
     }
 
     //Resistências
     const resistancesSection = createElement("div", {}, [
-      createElement("h3", {}, [resistancesLabel]),
+      createElement("h3", {}, [resistencias]),
     ]);
 
     if (monster.resistances && monster.resistances.length) {
@@ -243,16 +237,17 @@ async function renderMonsterDetails(monster) {
       );
       resistancesSection.appendChild(createElement("ul", {}, resistanceItems));
     } else {
-      resistancesSection.appendChild(createElement("p", {}, [noneText]));
+      resistancesSection.appendChild(createElement("p", {}, [semTexto]));
     }
 
     //Recompensas
     const rewardsSection = createElement("div", {}, [
-      createElement("h3", {}, [rewardsLabel]),
+      createElement("h3", {}, [recompensas]),
     ]);
 
     if (monster.rewards && monster.rewards.length) {
       const rewardGroups = {};
+      
       //Agrupa recompensas por item
       monster.rewards.forEach((reward) => {
         if (!rewardGroups[reward.item.name]) {
@@ -285,10 +280,10 @@ async function renderMonsterDetails(monster) {
 
       rewardsSection.append(...rewardItems);
     } else {
-      rewardsSection.appendChild(createElement("p", {}, [noneText]));
+      rewardsSection.appendChild(createElement("p", {}, [semTexto]));
     }
     //Adiciona todas as seções ao container principal (detalhes)
-    details.append(
+    detalhes.append(
       title,
       descEl,
       type,
@@ -304,7 +299,7 @@ async function renderMonsterDetails(monster) {
     loading.style.display = "none"; //Desativa o gif de loading
   } catch (err) {
     loading.style.display = "none"; //Desativa o gif de loading
-    details.appendChild(
+    detalhes.appendChild(
       createElement("p", {}, ["Erro ao carregar os dados: " + err.message])
     );
   }
