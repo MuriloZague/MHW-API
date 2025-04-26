@@ -1,5 +1,5 @@
-import { getAllMonstersNames, getMonsterById } from "./api.js";
-import { createElement, translateText } from "./utils.js";
+import { getAllMonstersNames, getMonsterById, translateText } from "./api.js";
+import { createElement } from "./utils.js";
 
 const caixaPesquisa = document.getElementById("monster-search");
 const listaSujestao = document.getElementById("suggestions");
