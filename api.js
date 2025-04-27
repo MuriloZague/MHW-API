@@ -47,6 +47,7 @@ export async function getMonsterById(id) {
   }
 }
 
+//Google tradutor API
 export async function translateText(text, targetLanguage = 'pt-br') {
   const apiKey = ''; //key ocultada
   const url = `https://translation.googleapis.com/language/translate/v2?key=${apiKey}`;
