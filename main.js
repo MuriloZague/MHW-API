@@ -79,7 +79,7 @@ const buscarDebounce = debounce(() => {
 }, 500);
 
 const listarMonstros = (value) => {
-  value.slice(0, 8).forEach((monster) => {
+  value.slice(0, 5).forEach((monster) => {
     const item = document.createElement("li");
     item.textContent = monster.name;
     item.style.cursor = "pointer";
