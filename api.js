@@ -68,6 +68,5 @@ export async function translateText(text, targetLanguage = 'pt-br') {
   if (data.error){
     alert(data.error.message);
   }
-  
   return data.data.translations[0].translatedText;
 }
